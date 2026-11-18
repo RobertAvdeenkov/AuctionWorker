@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выигранные аукционы</title>
+    <style>
+        @import url('templates/style.css');
+    </style>
+</head>
+<body>
+    <div class="frame">
+        <h1>Выигранные аукционы</h1>
+
+        <div class="container" id="messages">
+            <!-- Сюда будут подгружаться сообщения -->
+        </div>
+
+        <div class="logout">
+            <a href="/logout">Выйти</a>
+        </div>
+    </div>
+
+    <script src="templates/scripts.js"></script>
+    <script>
+        winloadLots();
+    </script>
+</body>
+</html>

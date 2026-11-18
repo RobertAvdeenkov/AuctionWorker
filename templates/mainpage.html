@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аукцион</title>
+    <style>
+        @import url('templates/style.css');
+    </style>
+</head>
+<body>
+    <div class="frame">
+        <h1>Аукцион</h1>
+        <h2>Активные лоты</h2>
+
+        <div class="container">
+            <h3>Создать лот</h3>
+            <input type="text" id="lotTitle" placeholder="Название лота">
+            <br>
+            <input type="number" id="lotPrice" placeholder="Начальная цена">
+            <br>
+            <input type="datetime-local" id="lotEndsAt">
+            <br>
+            <input placeholder="Пример: +7 777 777 77 77" id="contact">
+            <button onclick="createLot()">Создать</button>
+        </div>
+
+        <div class="container">
+            <a href="/mail">Почтовый ящик</a>
+            <a href="/winlot">Выигранные аукционы</a>
+            <h3>Список лотов</h3>
+                <div id="lots">
+                    <!-- Сюда будут подгружаться лоты -->
+                </div>
+        </div>
+
+        <div class="logout">
+            <a href="/logout">Выйти</a>
+        </div>
+    </div>
+
+    <script src="templates/scripts.js"></script>
+    <script>
+
+        // WebSocket для обновления ставок
+        const ws = new WebSocket(`ws://${window.location.host}/ws/lots`);
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'bid') {
+                loadLots();
+            }
+        };
+
+        // Загрузка при старте
+        loadLots();
+    </script>
+</body>
+</html>

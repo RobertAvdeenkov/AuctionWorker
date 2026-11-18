@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+.pytest_cache/
+.ruff_cache/
+alembic/
+
+# VSCode
+.vscode/
+
+# OS
+auction.db
+test_auction.db

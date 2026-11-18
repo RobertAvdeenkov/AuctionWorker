@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - '8000:8000'
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql+asyncpg://arv:123@db:5432/db
+      SECRET: "123"
+      ALGORITHM: HS256
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      redis:
+        condition: service_started
+      db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - default
+  
+  rabbitmq:
+    image: rabbitmq:3.13
+    ports:
+      - '5672:5672'
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - default
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    networks:
+      - default
+  
+  db:
+    image: postgres:15
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: arv
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: db
+    networks:
+      - default
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '3000:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+  
+    depends_on:
+      - prometheus
+
+  worker1:
+    build: .
+    command: uvicorn worker:app --host 0.0.0.0 --port 8080
+    depends_on:
+      - app
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql+asyncpg://arv:123@db:5432/db
+      SECRET: 123
+      ALGORITHM: HS256
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    networks:
+      - default
+
+  worker2:
+    build: .
+    command: uvicorn retry:app --host 0.0.0.0 --port 2000
+    depends_on:
+      - app
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql+asyncpg://arv:123@db:5432/db
+      SECRET: 123
+      ALGORITHM: HS256
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    networks:
+      - default
+
+  worker3:
+    build: .
+    command: uvicorn DLX:app --host 0.0.0.0 --port 4000
+    depends_on:
+      - app
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql+asyncpg://arv:123@db:5432/db
+      SECRET: 123
+      ALGORITHM: HS256
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
+
