@@ -20,6 +20,12 @@ spec:
         - containerPort: 8000
         env:
         - name: SECRET
-          value: "123a"
+          value: "avv"
         - name: ALGORITHM
           value: "HS256"
+        volumeMounts:
+        - name: sqlite-data
+          mountPath: /app
+      volumes:
+      - name: sqlite-data
+        emptyDir: {}
