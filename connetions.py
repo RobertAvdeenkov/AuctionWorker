@@ -4,6 +4,7 @@ from logger import logger
 from prometheus_client import Gauge
 
 WS_CONNECTION_COUNTER=Gauge('ws_counter','Websockets connection counter')
+WS_BIDS_COUNTER=Gauge('ws_bids','Webssocket bids counter')
 
 class ConnectionManager:
     def __init__(self):
@@ -26,6 +27,7 @@ class ConnectionManager:
         for i in self.connections:
             await i.send_text(json.dumps(data))
         await redis.flushdb()
+        WS_BIDS_COUNTER.inc()
         
 
     

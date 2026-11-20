@@ -14,15 +14,14 @@ def create_token(user:str,timedelta):
         'sub':user,
         'exp':datetime.utcnow()+timedelta
     }
-    return jwt.encode(payload,SECRET,ALGORITHM)
+    return jwt.encode(payload,SECRET,ALGORITHM) #type:ignore
 
-async def get_by_token(token:str):
+async def get_by_token(token:str, dbs):
     try:
-        data=jwt.decode(token,SECRET,algorithms=[ALGORITHM])
-        async with SessionLocal() as db: #type:ignore
-            result=(await db.execute(select(User).filter(User.name==data['sub']))).first()
-            if not result: raise HTTPException(404,'Такого пользователя нет')
-            return result[0]
+        data=jwt.decode(token,SECRET,algorithms=[ALGORITHM]) #type:ignore
+        result=(await dbs.execute(select(User).filter(User.name==data['sub']))).first()
+        if not result: raise HTTPException(404,'Такого пользователя нет')
+        return result[0]
     except ExpiredSignatureError:
         raise HTTPException(401,'Токен протух!')
     except JWTError:

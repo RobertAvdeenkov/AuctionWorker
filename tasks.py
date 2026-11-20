@@ -14,6 +14,7 @@ import os
 import aio_pika as pika
 import json
 from connetions import ConnectionManager
+from prometheus_client import Counter
 
 router=APIRouter()
 REDIS_URL=os.getenv('REDIS_URL')
@@ -23,6 +24,7 @@ else: r=redis.Redis(decode_responses=True)
 connection=None
 channel=None
 manager=ConnectionManager()
+LOTS_COUNTER=Counter('lots_counter','Created lots counter')
 
 @router.on_event('startup')
 async def startup():
@@ -48,7 +50,7 @@ async def mail():
 
 @router.websocket('/ws/lots')
 async def web_lost(websocket:WebSocket, access_token=Cookie(), db:AsyncSession=Depends(get_db)):
-    await get_by_token(access_token)
+    await get_by_token(access_token,db)
     await manager.connect(websocket)
     while True:
         try:
@@ -72,7 +74,7 @@ async def log(db:AsyncSession=Depends(get_db), name=Form(), password=Form()):
     if not(result): raise HTTPException(401,'Неправильный логин или пароль!')
     user=result[0]
     if not(bcrypt.checkpw(password.encode(), user.password.encode())): 
-        raise HTTPException(401,'Неправильный логин или пароль!')
+        raise HTTPException(401,'Неправильный логин или парioioоль!')
     response=RedirectResponse('/mainpage',status_code=303)
     refresh=create_token(name, timedelta(days=30))
     response.set_cookie('access_token', create_token(name, timedelta(minutes=60)),path='/')
@@ -83,7 +85,7 @@ async def log(db:AsyncSession=Depends(get_db), name=Form(), password=Form()):
 
 @router.post('/refresh')
 async def refresh(refresh_token=Cookie(), db:AsyncSession=Depends(get_db)):
-    user=await get_by_token(refresh_token)
+    user=await get_by_token(refresh_token,db)
     if not(user.refresh_token==refresh_token): return JSONResponse({'message':'Неправильный токен'},status_code=401)
     response=JSONResponse({'status':'ok'})
     response.set_cookie('access_token',create_token(user.name, timedelta(hours=1)),path='/')
@@ -98,17 +100,18 @@ async def logout():
 
 @router.post('/lots')
 async def add_lot(data=Body(), access_token=Cookie(), db:AsyncSession=Depends(get_db)):
-    user=await get_by_token(access_token)
+    user=await get_by_token(access_token,db)
     if datetime.strptime(data['ends_at'].replace('T',' '),"%Y-%m-%d %H:%M")<datetime.now():
         raise HTTPException(400,'Дата должна быть позже настоящей!')
     target=Lot(title=data['title'], user_id=user.id, start_price=int(data['price']), current_price=int(data['price']),ends_at=datetime.strptime(data['ends_at'].replace('T',' '), "%Y-%m-%d %H:%M"), contact=data['contact'])
     db.add(target)
     await db.commit()
     await r.flushdb()
+    LOTS_COUNTER.inc()
 
 @router.get('/lots')
 async def get_lots(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
-    user=await get_by_token(access_token)
+    user=await get_by_token(access_token,db)
     data=await r.get(f'{user.name}:lots')
     if data: return {'lots':json.loads(data)}
     lots=(await db.execute(text(f'''
@@ -129,7 +132,7 @@ async def get_lots(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
 
 @router.post('/lots/{id}/bid')
 async def bid_add(id:int, access_token=Cookie(), db:AsyncSession=Depends(get_db), data=Body()):
-    user=await get_by_token(access_token)
+    user=await get_by_token(access_token,db)
     result=(await db.execute(text(f'''
     select lots.id, lots.current_price, MAX(bids.by), MAX(bids.price), lots.ends_at, lots.title, bids.lot_id
     from lots
@@ -157,7 +160,7 @@ async def bid_add(id:int, access_token=Cookie(), db:AsyncSession=Depends(get_db)
 
 @router.get('/messages')
 async def messages(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
-    user=await get_by_token(access_token)
+    user=await get_by_token(access_token,db)
     data=await r.get(f'{user.name}:messages')
     if data: return {'messages':json.loads(data)}
     result=(await db.execute(select(Message).filter(Message.user_id==user.id).order_by(desc(Message.created_at)))).all()
@@ -170,7 +173,7 @@ async def messages(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
 
 @router.delete('/lots/{id}')
 async def delete_lot(id:int, access_token=Cookie(), db:AsyncSession=Depends(get_db)):
-    user=await get_by_token(access_token)
+    user=await get_by_token(access_token,db)
     result=(await db.execute(select(Lot).filter(Lot.id==id))).first()
     if not(result): raise HTTPException(404,'Такого лота нет')
     lot=result[0]
@@ -185,7 +188,7 @@ async def winlots():
 
 @router.get('/winlots')
 async def load_winlots(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
-    user=await get_by_token(access_token)
+    user=await get_by_token(access_token,db)
     data=await r.get(f'{user.name}:win')
     if data: return {'lots':json.loads(data)}
     result=(await db.execute(text(f'''
@@ -193,7 +196,7 @@ async def load_winlots(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
     from lots
     INNER join bids ON bids.lot_id=lots.id
     where lots.ends_at<CURRENT_TIMESTAMP and bids.by=:user_name
-    group by lots.id, lots.title, lots.contact, lots.by
+    group by lots.id, lots.title, lots.contact, bids.by
     '''), {'user_name':user.name})).all()
     all_winlots=[]
     for i in result:
