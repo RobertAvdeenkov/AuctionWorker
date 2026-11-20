@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession,create_async_engine
 from fastapi.testclient import TestClient
 import httpx
 from sqlalchemy import delete,create_engine
-from models import User,Base
+from models import User,Base, Lot, Bid
 from auth import create_token
 from datetime import timedelta
 from tasks import r
@@ -52,6 +52,8 @@ async def db():
 async def clean_db(db):
     try:
         await db.execute(delete(User))
+        await db.execute(delete(Lot))
+        await db.execute(delete(Bid))
         await db.commit()
     finally:
         await db.close()
@@ -93,7 +95,7 @@ async def test_add_lot():
 async def test_delete_lot():
     await fetch('/reg','post',data={'name':'test','password':'123'})
     await fetch('/lots','post', jsondata={'title':'test','price':'100','ends_at':'2026-12-31T21:20','contact':'123'}, cookies={'access_token':create_token('test',timedelta(hours=1))})
-    response=await fetch('/lots/1', 'delete', cookies={'access_token':create_token('test',timedelta(hours=1))}, json=True)
+    response=await fetch('/lots/1', 'delete', cookies={'access_token':create_token('test',timedelta(hours=1))})
     assert response==200
 
 async def test_delete_lot_not_found():
@@ -117,3 +119,14 @@ async def test_load_win_lots():
     await fetch('/reg','post',data={'name':'test','password':'123'})
     response=await fetch('/winlots', 'get',cookies={'access_token':create_token('test', timedelta(hours=1))})
     assert response==200
+
+async def test_bids():
+    await fetch('/reg','post',data={'name':'test','password':'123'})
+    await fetch('/reg','post',data={'name':'new','password':'123'})
+    await fetch('/lots','post', jsondata={'title':'test','price':'100','ends_at':'2026-12-31T21:20','contact':'123'}, cookies={'access_token':create_token('test',timedelta(hours=1))})
+    response=await fetch('/lots/1/bid', 'post', cookies={'access_token':create_token('test', timedelta(hours=1))}, jsondata={'amount':'1200'}, json=True)
+    assert response==200
+
+async def test_logout():
+    response=await fetch('/logout','get')
+    assert response==303
