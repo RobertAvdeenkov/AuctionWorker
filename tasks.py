@@ -143,7 +143,7 @@ async def bid_add(id:int, access_token=Cookie(), db:AsyncSession=Depends(get_db)
     group by lots.id, bids.lot_id
     '''))).first()
     if not(result): raise HTTPException(404,'Такого лота нет!')
-    date=datetime.strptime(result[4].replace('.000000',''), "%Y-%m-%d %H:%M:%S")
+    date=result[4]
     if date<datetime.now():raise HTTPException(403,'Аукцион закончился')
     new_price=int(data['amount'])
     if new_price-int(result[1])<10:raise HTTPException(400,'Минимальная ставка: 10 единиц')
