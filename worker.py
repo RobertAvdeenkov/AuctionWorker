@@ -37,16 +37,17 @@ async def main():
             async with SessionLocal() as db: #type:ignore
                 if body['user']:
                     user=(await db.execute(select(User).filter(User.name==body['user']))).first()[0] #type:ignore
-                    target=Message(text=f'Вашу ставку в {body['title']} перебили!', user_id=user.id, status='success', created_at=datetime.now())
-                    db.add(target)
-                    await db.commit()
-                    await db.refresh(target)
+                    if not(body['sent']):
+                        target=Message(text=f'Вашу ставку в {body['title']} перебили!', user_id=user.id, status='success', created_at=datetime.now())
+                        db.add(target)
+                        await db.commit()
+                        await db.refresh(target)
 
                     try:
                         if user.tg_id and user.distribution and TOKEN:
                             await bot.send_message(chat_id=int(user.tg_id), text=f'Вашу ставку в {body['title']} перебили!')
                     except:
-                        await channel.default_exchange.publish(message=pika.Message(json.dumps({'tg':user.tg_id, 'title':body['title'], 'id':target.id, 'message':f'Вашу ставку в {body['title']} перебили!'}).encode()), routing_key='retry') #type:ignore
+                        await channel.default_exchange.publish(message=pika.Message(json.dumps({'title':body['title'], 'user':body['user'], 'sent':True}).encode()), routing_key='retry') #type:ignore
 
     await queue.consume(callback) #type:ignore
 

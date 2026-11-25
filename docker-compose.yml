@@ -3,7 +3,7 @@ version: '3.8'
 services:
   app:
     build: .
-    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8000"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - '8000:8000'
     environment:
@@ -75,7 +75,7 @@ services:
 
   worker1:
     build: .
-    command: uvicorn worker:app --host 0.0.0.0 --port 8080
+    command: ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8080"]
     depends_on:
       - app
     environment:
@@ -89,7 +89,7 @@ services:
 
   worker2:
     build: .
-    command: uvicorn retry:app --host 0.0.0.0 --port 2000
+    command: ["uvicorn", "retry:app", "--host", "0.0.0.0", "--port", "2000"]
     depends_on:
       - app
     environment:
@@ -103,7 +103,7 @@ services:
 
   worker3:
     build: .
-    command: uvicorn DLX:app --host 0.0.0.0 --port 4000
+    command: ["uvicorn", "DLX:app", "--host", "0.0.0.0", "--port", "3000"]
     depends_on:
       - app
     environment:

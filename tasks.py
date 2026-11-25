@@ -14,7 +14,7 @@ import os
 import aio_pika as pika
 import json
 from connetions import ConnectionManager
-from prometheus_client import Counter
+from prometheus_client import Counter,Gauge
 
 router=APIRouter()
 REDIS_URL=os.getenv('REDIS_URL')
@@ -25,6 +25,7 @@ connection=None
 channel=None
 manager=ConnectionManager()
 LOTS_COUNTER=Counter('lots_counter','Created lots counter')
+ACTIVE_LOTS_COUNTER=Gauge('active_lots_counter','Active lots counter')
 
 @router.on_event('startup')
 async def startup():
@@ -74,7 +75,7 @@ async def log(db:AsyncSession=Depends(get_db), name=Form(), password=Form()):
     if not(result): raise HTTPException(401,'Неправильный логин или пароль!')
     user=result[0]
     if not(bcrypt.checkpw(password.encode(), user.password.encode())): 
-        raise HTTPException(401,'Неправильный логин или парioioоль!')
+        raise HTTPException(401,'Неправильный логин или пароль!')
     response=RedirectResponse('/mainpage',status_code=303)
     refresh=create_token(name, timedelta(days=30))
     response.set_cookie('access_token', create_token(name, timedelta(minutes=60)),path='/')
@@ -127,6 +128,7 @@ async def get_lots(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
         for i in lots:
             try: all_lots.append({'id':i[0], 'title':i[1],'current_price':i[2],'ends_at':i[3].strftime("%Y-%m-%d %H:%M"), 'leader':i[5], 'contact':i[4], 'is_owner':1 if i[-1]==user.id else 0})
             except Exception as e: break
+    ACTIVE_LOTS_COUNTER.set(len(all_lots))
     await r.setex(f'{user.name}:lots',60, json.dumps(all_lots))
     return {'lots':all_lots}
 
@@ -155,7 +157,7 @@ async def bid_add(id:int, access_token=Cookie(), db:AsyncSession=Depends(get_db)
     await db.execute(text(f'UPDATE lots set current_price={new_price} where id={id}'))
     if date-datetime.now()<timedelta(minutes=1): await db.execute(text(f'UPDATE lots SET ends_at = datetime(\'now\', \'+1 minute\') WHERE id = {id}'))
     await db.commit()
-    if result[2]!=user.name: await channel.default_exchange.publish(routing_key='main_queue', message=pika.Message(json.dumps({'user':result[2], 'title':result[-1], 'id':result[0]}).encode())) #type:ignore
+    if result[2]!=user.name: await channel.default_exchange.publish(routing_key='main_queue', message=pika.Message(json.dumps({'user':result[2], 'title':result[-1], 'id':result[0], 'sent':False}).encode())) #type:ignore
     await r.flushdb()
 
 @router.get('/messages')
