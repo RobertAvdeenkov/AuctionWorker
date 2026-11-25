@@ -43,7 +43,7 @@
     <script>
 
         // WebSocket для обновления ставок
-        const ws = new WebSocket(`ws://${window.location.host}/ws/lots`);
+        const ws = new WebSocket(`wss://${window.location.host}/ws/lots`);
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'bid') {
