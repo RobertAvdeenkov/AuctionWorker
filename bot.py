@@ -123,3 +123,12 @@ async def distribution_setting(message:types.Message, state:FSMContext):
             await db.commit()
             await message.answer('Успешно!')
             return
+
+@app.on_event('startup')
+async def startup():
+    await bot.delete_webhook(drop_pending_updates=True)
+    spawn(dp.start_polling(bot))
+
+@app.get('/')
+async def root():
+    return {'status':'ok'}
