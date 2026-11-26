@@ -157,7 +157,7 @@ async def bid_add(id:int, access_token=Cookie(), db:AsyncSession=Depends(get_db)
     await db.execute(text(f'UPDATE lots set current_price={new_price} where id={id}'))
     if date-datetime.now()<timedelta(minutes=1): await db.execute(text(f'UPDATE lots SET ends_at = datetime(\'now\', \'+1 minute\') WHERE id = {id}'))
     await db.commit()
-    if result[2]!=user.name: await channel.default_exchange.publish(routing_key='main_queue', message=pika.Message(json.dumps({'user':result[2], 'title':result[4], 'id':result[0], 'sent':False}).encode())) #type:ignore
+    if result[2]!=user.name: await channel.default_exchange.publish(routing_key='main_queue', message=pika.Message(json.dumps({'user':result[2], 'title':result[5], 'id':result[0], 'sent':False}).encode())) #type:ignore
     await r.flushdb()
 
 @router.get('/messages')
