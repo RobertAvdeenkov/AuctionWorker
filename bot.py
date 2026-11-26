@@ -74,7 +74,7 @@ async def authorization(message:types.Message, state:FSMContext):
                 await message.answer('Неправильный логин или пароль')
                 return
             await state.update_data(user=user.name)
-            user.tg_id=message.from_user.id #type:ignore
+            user.tg_id=str(message.from_user.id) #type:ignore
             await db.commit()
             await message.answer('Авторизация прошла успешно!\nВведите /start, чтобы продолжить')
             await state.set_state(None)

@@ -9,7 +9,7 @@ class User(Base):
     name=Column(String)
     password=Column(String)
     refresh_token=Column(String, default='')
-    tg_id=Column(Integer, nullable=True)
+    tg_id=Column(String, nullable=True)
     distribution=Column(Boolean,default=False)
 
     lots=relationship('Lot',back_populates='user')

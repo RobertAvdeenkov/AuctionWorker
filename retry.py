@@ -37,10 +37,10 @@ async def main():
             if count>3:
                 await channel.default_exchange.publish(message=pika.Message(json.dumps({'id':body['id']}).encode()), routing_key='dlx_queue') #type:ignore
             try:
-                await bot.send_message(chat_id=int(body['tg']), text=body['message'])
+                await bot.send_message(chat_id=int(body['tg']), text=f'Вашу ставку в {body['title']} перебили!')
             except:
                 await r.set((f'{body['id']}:tg:message'), count)
-                await channel.default_exchange.publish(routing_key='retry', message=pika.Message(json.dumps({'tg':body['tg'], 'id':body['id'], 'message':f'Вашу ставку в {body['title']} перебили!'}).encode())) #type:ignore
+                await channel.default_exchange.publish(routing_key='retry', message=pika.Message(json.dumps({'tg':body['tg'], 'id':body['id'], 'title':body['title']}).encode())) #type:ignore
 
     await queue.consume(callback) #type:ignore
 
