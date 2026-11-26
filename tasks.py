@@ -116,12 +116,22 @@ async def get_lots(access_token=Cookie(), db:AsyncSession=Depends(get_db)):
     data=await r.get(f'{user.name}:lots')
     if data: return {'lots':json.loads(data)}
     lots=(await db.execute(text(f'''
-    SELECT lots.id as li, lots.title as lt, lots.current_price as cp, lots.ends_at as en, lots.contact as c, MAX(bids.by), max(bids.price), lots.user_id
-    from lots
-    full OUTER join bids on lots.id=bids.lot_id
-    where lots.ends_at>CURRENT_TIMESTAMP
-    GROUP by lots.id, lots.user_id
-    ORDER by lots.ends_at DESC
+    SELECT 
+        lots.id AS li,
+        lots.title AS lt,
+        lots.current_price AS cp,
+        lots.ends_at AS en,
+        lots.contact AS c,
+        bids.by AS leader,
+        bids.price AS max_price,
+        lots.user_id
+    FROM lots
+    LEFT JOIN bids ON bids.lot_id = lots.id
+    WHERE lots.ends_at > CURRENT_TIMESTAMP
+    AND (bids.price IS NULL OR bids.price = (
+        SELECT MAX(price) FROM bids WHERE lot_id = lots.id
+    ))
+    ORDER BY lots.ends_at DESC
     '''))).all()
     all_lots=[]
     if lots:
