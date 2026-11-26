@@ -44,6 +44,7 @@ async def main():
                         await db.refresh(target)
 
                     try:
+                        logger.info('TG message started')
                         if user.tg_id and user.distribution and TOKEN:
                             await bot.send_message(chat_id=int(user.tg_id), text=f'Вашу ставку в {body['title']} перебили!')
                             logger.info('TG message was sent')
