@@ -103,7 +103,7 @@ async def settings(call: types.CallbackQuery, state:FSMContext):
         await call.message.answer('Введите /start, чтобы продолжить')#type:ignore
         return
 
-@dp.message(F.data=='distribution')
+@dp.callback_query(F.data=='distribution')
 async def distribution_setting(call: types.CallbackQuery, state:FSMContext):
     data=await state.get_data()
     name=data.get('user')
