@@ -42,7 +42,7 @@ async def start(message:types.Message, state:FSMContext):
     user=data.get('user')
     builder=InlineKeyboardBuilder()
     if user:
-        builder.button(text='Настроить рассылку', callback_data='settings')
+        builder.button(text='Настройки', callback_data='settings')
         builder.adjust(1)
         await message.answer(f'''
         Здравствуйте, {user}!
@@ -83,8 +83,8 @@ async def authorization(message:types.Message, state:FSMContext):
         await message.answer('Введите /start, чтобы продолжить')
         return
 
-@dp.message(F.data=='settings')
-async def settings(message:types.Message, state:FSMContext):
+@dp.callback_query(F.data=='settings')
+async def settings(call: types.CallbackQuery, state:FSMContext):
     data=await state.get_data()
     name=data.get('user')
     if name:
@@ -92,19 +92,19 @@ async def settings(message:types.Message, state:FSMContext):
         async with SessionLocal() as db: #type:ignore
             result=(await db.execute(select(User).filter(User.name==name))).first()
             if not(result):
-                await message.answer('Произошла ошибка')
+                await call.message.answer('Произошла ошибка') #type:ignore
                 await state.clear()
                 return
             user=result[0]
             builder.button(text=f'{'Включить' if not(user.distribution) else 'Отключить'} рассылку', callback_data='distribution')
-            await message.answer('Настройки', reply_markup=builder.as_markup())
+            await call.message.answer('Настройки', reply_markup=builder.as_markup())#type:ignore
             return
     else:
-        await message.answer('Введите /start, чтобы продолжить')
+        await call.message.answer('Введите /start, чтобы продолжить')#type:ignore
         return
 
 @dp.message(F.data=='distribution')
-async def distribution_setting(message:types.Message, state:FSMContext):
+async def distribution_setting(call: types.CallbackQuery, state:FSMContext):
     data=await state.get_data()
     name=data.get('user')
     if name:
@@ -112,7 +112,7 @@ async def distribution_setting(message:types.Message, state:FSMContext):
         async with SessionLocal() as db: #type:ignore
             result=(await db.execute(select(User).filter(User.name==name))).first()
             if not(result):
-                await message.answer('Произошла ошибка')
+                await call.message.answer('Произошла ошибка')#type:ignore
                 await state.clear()
                 return
             user=result[0]
@@ -121,7 +121,7 @@ async def distribution_setting(message:types.Message, state:FSMContext):
             else:
                 user.distribution=False
             await db.commit()
-            await message.answer('Успешно!')
+            await call.message.answer('Успешно!')#type:ignore
             return
 
 @app.on_event('startup')
