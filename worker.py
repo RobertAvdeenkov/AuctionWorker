@@ -5,8 +5,8 @@ from logger import logger
 import asyncio
 import json
 from database import SessionLocal
-from sqlalchemy import select,text
-from models import Message,User
+from sqlalchemy import select,text, update
+from models import Message,User,Lot
 from aiogram import Bot
 from datetime import datetime
 
@@ -75,7 +75,7 @@ async def send_tg():
                     await bot.send_message(chat_id=int(i[3]), text=f'Поздравляем, вы выиграли аукцион {i[0]}!\nНаписать владельцу: {i[5]}')
                     ids.append(i[6])
             if ids:
-                await db.execute(text('UPDATE lots set sent_tg=TRUE where id=:li'), [{'li':i} for i in ids])
+                await db.execute(update(Lot).filter(Lot.id.in_(ids)).values(send_tg=True))
                 await db.commit()
         await asyncio.sleep(60)
 
