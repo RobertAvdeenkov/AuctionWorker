@@ -25,6 +25,7 @@ class Lot(Base):
     start_price=Column(Integer)
     contact=Column(String)
     user_id=Column(Integer, ForeignKey('users.id'))
+    sent_tg=Column(Boolean, default=False)
 
     user=relationship('User',back_populates='lots')
     bids=relationship('Bid',back_populates='lot')

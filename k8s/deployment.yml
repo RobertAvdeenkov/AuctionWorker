@@ -14,15 +14,22 @@ spec:
     spec:
       containers:
       - name: auction-app
+        command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         image: auction-app:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 8000
         env:
-        - name: SECRET
-          value: "avv"
-        - name: ALGORITHM
-          value: "HS256"
+          - name: SECRET
+            value: "avv"
+          - name: ALGORITHM
+            value: "HS256"
+          - name: DATABASE_URL
+            value: "postgresql+asyncpg://arv:123@db:5432/db"
+          - name: REDIS_URL
+            value: "redis://redis:6379"
+          - name: RABBITMQ_URL
+            value: "amqp://guest:guest@rabbitmq:5672/"
         volumeMounts:
         - name: sqlite-data
           mountPath: /app

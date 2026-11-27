@@ -5,7 +5,7 @@ from logger import logger
 import asyncio
 import json
 from database import SessionLocal
-from sqlalchemy import select
+from sqlalchemy import select,text
 from models import Message,User
 from aiogram import Bot
 from datetime import datetime
@@ -59,12 +59,32 @@ async def main():
     except KeyboardInterrupt:
         return
 
+async def send_tg():
+    while True:
+        async with SessionLocal() as db: #type:ignore
+            result=(await db.execute(text('''
+            select lots.title, bids.by, users.id, users.tg_id, users.distribution,lots.contact, lots.id
+            from lots
+            inner join bids on lots.id=bids.lot_id
+            inner join users on bids.user_id=users.id
+            where lots.ends_at<CURRENT_TIMESTAMP and lots.sent_tg=FALSE and bids.price=(select MAX(price) from bids where bids.lot_id=lots.id)
+            '''))).all()
+            ids=[]
+            for i in result:
+                if i[3] and i[4]:
+                    await bot.send_message(chat_id=int(i[3]), text=f'Поздравляем, вы выиграли аукцион {i[0]}!\nНаписать владельцу: {i[5]}')
+                    ids.append(i[6])
+            await db.execute(text('UPDATE lots set sent_tg=TRUE where id=:li'), [{'li':i} for i in ids])
+            await db.commit()
+        await asyncio.sleep(60)
+
 @app.on_event('startup')
 async def startup():
     global channel,connection
     connection=await pika.connect_robust(os.getenv('RABBITMQ_URL',None))
     channel=await connection.channel()
     spawn(main())
+    spawn(send_tg())
     logger.info('Main worker Started')
 
 @app.get('/')
