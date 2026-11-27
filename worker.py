@@ -74,8 +74,9 @@ async def send_tg():
                 if i[3] and i[4]:
                     await bot.send_message(chat_id=int(i[3]), text=f'Поздравляем, вы выиграли аукцион {i[0]}!\nНаписать владельцу: {i[5]}')
                     ids.append(i[6])
-            await db.execute(text('UPDATE lots set sent_tg=TRUE where id=:li'), [{'li':i} for i in ids])
-            await db.commit()
+            if ids:
+                await db.execute(text('UPDATE lots set sent_tg=TRUE where id=:li'), [{'li':i} for i in ids])
+                await db.commit()
         await asyncio.sleep(60)
 
 @app.on_event('startup')
