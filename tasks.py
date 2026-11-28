@@ -156,6 +156,7 @@ async def bid_add(id:int, access_token=Cookie(), db:AsyncSession=Depends(get_db)
     date=result[4]
     if date<datetime.now():raise HTTPException(403,'Аукцион закончился')
     new_price=int(data['amount'])
+    if new_price>2147483646:raise HTTPException(400,'Достигнута максимальная сумма ставки')
     if new_price-int(result[1])<10:raise HTTPException(400,'Минимальная ставка: 10 единиц')
     if not(result[3]): 
         if result[1]>new_price:
